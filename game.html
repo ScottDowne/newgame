@@ -23,42 +23,46 @@
     position: absolute;
     left: 50%;
     top: 50%;
-    margin-left: -16px;
-    margin-top: -16px;
+    margin-left: -32px;
+    margin-top: -32px;
   }
   .row {}
   .ground {
     background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAhUlEQVRYhe3XwQ2AIAwF0JowL2ENZiCM5ghsgNa7CQG02C96+Oc+4KcJtO4La4Y+A7CB2AYCBrho2EXzOAQHUErKnlP2Ylfe3QE1wNXBvRBcwGjY+wDSg/EB0oupdAA8QOsCkYLgAaSepLW0+IC7ZaxB8AGjMzFgq2R+wCn4/wKt/AB1wAEpUF7eamflHQAAAABJRU5ErkJggg==");
   }
   .col {
-    height: 32px;
-    width: 32px;
+    height: 64px;
+    width: 64px;
     display: inline-block;
     position: relative;
     padding: 0px;
+    image-rendering: -moz-crisp-edges;
+    background-size: 64px 64px;
   }
   .player {
-    height: 32px;
-    width: 32px;
+    height: 64px;
+    width: 64px;
     display: inline-block;
     position: absolute;
     padding: 0px;
     left: 50%;
     top: 50%;
-    margin-left: -16px;
-    margin-top: -16px;
-background: url(player.png);
+    margin-left: -32px;
+    margin-top: -32px;
+    background: url(player.png);
+    image-rendering: -moz-crisp-edges;
+    background-size: 2400px 800px;
   }
   .monster {
-    height: 32px;
-    width: 32px;
+    height: 64px;
+    width: 64px;
     display: inline-block;
     position: absolute;
     padding: 0px;
     left: 50%;
     top: 50%;
-    margin-left: -16px;
-    margin-top: -16px;
+    margin-left: -32px;
+    margin-top: -32px;
   }
   .player-battle-menu {
 
@@ -402,8 +406,8 @@ background: url(player.png);
     var container = document.querySelector(".container");
     var boardContainer = document.createElement("div");
     boardContainer.classList.add("board-container");
-    boardContainer.style.height = height * 32 + "px";
-    boardContainer.style.width = width * 32 + "px";
+    boardContainer.style.height = height * 64 + "px";
+    boardContainer.style.width = width * 64 + "px";
     var row;
     var col;
     for (var y = 0; y < height; y++) {
@@ -557,8 +561,8 @@ background: url(player.png);
     var monsterDiv = document.createElement("div");
     monsterDiv.classList.add("monster");
     monsterDiv.style.backgroundImage = 'url("' + monster.sprite + '")';
-    monsterDiv.style.marginLeft = (monster.xOffset * 32) - 16 + "px";
-    monsterDiv.style.marginTop = (monster.yOffset * 32) - 16 + "px";
+    monsterDiv.style.marginLeft = (monster.xOffset * 64) - 32 + "px";
+    monsterDiv.style.marginTop = (monster.yOffset * 64) - 32 + "px";
     container.appendChild(monsterDiv);
 
     function startCooldownTimer(update, finished, cooldown) {
@@ -666,6 +670,8 @@ background: url(player.png);
   }
   processKeys();
   var keyframe = "0";
+  var downKeyframe = "-128px";
+  var upKeyframe = "-256px";
   function movePlayer(direction, x, y) {
 
     var playerElement = player.element;
@@ -673,19 +679,23 @@ background: url(player.png);
     var steps = 0;
     var xSteps = 0;
     var ySteps = 0;
-    var speed = 8;
+    var speed = 16;
     function step() {
       steps+=speed;
-      if (steps > 32) {
+      if (steps > 64) {
         player.y+=y;
         player.x+=x;
         dialogFocus.pop();
         rollForBattle(chance);
         setTimeout(processKeys);
         if (keyframe === "0") {
-          keyframe = "-32px"
+          keyframe = "-64px"
+          downKeyframe = "-192px";
+          upKeyframe = "-320px";
         } else {
           keyframe = "0";
+          downKeyframe = "-128px";
+          upKeyframe = "-256px";
         }
       } else {
         //if (playerElement.classList.contains(direction + "1")) {
@@ -694,21 +704,13 @@ background: url(player.png);
         playerElement.className = "player";
         if (direction === "left") {
           playerElement.classList.add("flip");
-          //playerElement.classList.add("right" + (steps / speed));
-          playerElement.style.backgroundPosition = -32 * ((steps / speed)-1) + "px " + keyframe;
+          playerElement.style.backgroundPosition = -64 * ((steps / speed)-1) + "px " + keyframe;
         } else if (direction === "right") {
-          playerElement.style.backgroundPosition = -32 * ((steps / speed)-1) + "px " + keyframe;
-          //playerElement.classList.add("right" + (steps / speed));
+          playerElement.style.backgroundPosition = -64 * ((steps / speed)-1) + "px " + keyframe;
         } else if (direction === "down") {
-          //playerElement.classList.add("down1");
-          if ((steps / speed) !== 1) {
-          //  playerElement.classList.add("flip");
-          }
+          playerElement.style.backgroundPosition = -64 * ((steps / speed)-1) + "px " + downKeyframe;
         } else if (direction === "up") {
-          //playerElement.classList.add("up1");
-          if ((steps / speed) !== 1) {
-          //  playerElement.classList.add("flip");
-          }
+          playerElement.style.backgroundPosition = -64 * ((steps / speed)-1) + "px " + upKeyframe;
         }
         //} else {
         //  playerElement.className = "player";
@@ -716,8 +718,8 @@ background: url(player.png);
         //}
         xSteps+=((-x)*speed);
         ySteps+=((-y)*speed);
-        boardContainer.style.marginLeft = (-player.x * 32) + xSteps - 16 + "px";
-        boardContainer.style.marginTop = (-player.y * 32) + ySteps - 16 + "px";
+        boardContainer.style.marginLeft = (-player.x * 64) + xSteps - 32 + "px";
+        boardContainer.style.marginTop = (-player.y * 64) + ySteps - 32 + "px";
         setTimeout(step, 100);
       }
     }
@@ -752,8 +754,8 @@ background: url(player.png);
     container.appendChild(playerElement);
     player.x = x;
     player.y = y;
-    boardContainer.style.marginLeft = (-x * 32) - 16 + "px";
-    boardContainer.style.marginTop = (-y * 32) - 16 + "px";
+    boardContainer.style.marginLeft = (-x * 64) - 32 + "px";
+    boardContainer.style.marginTop = (-y * 64) - 32 + "px";
     document.addEventListener("keydown", onGameKeydown, false);
     document.addEventListener("keyup", onGameKeyup, false);
     var playerHealthElement = document.querySelector(".player-health");
