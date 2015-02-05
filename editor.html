@@ -1,129 +1,4 @@
-<link href="https://apps.webmaker.org/vendor/font-awesome/css/font-awesome.css" rel="stylesheet"></link>
 <script type="text/javascript" src="http://www.parsecdn.com/js/parse-1.2.19.min.js"></script>
-
-<style>
-.editable-attributes .sprite-container div {
-  margin-bottom: 10px;
-}
-.editable-attributes .sprite-container .sprite-color-picker {
-  background-color: white;
-  cursor: pointer;
-  position: absolute;
-  height: 60%;
-  left: 70%;
-  width: 60%;
-  top: 70%;
-  padding: 0;
-  border-left: solid 1px #000;
-  transform: rotate(45deg);
-}
-.editable-attributes .sprite-container .sprite-color-picker:hover {
-  height: 80%;
-  left: 60%;
-  width: 80%;
-  top: 60%;
-}
-.editable-attributes .sprite-container .sprite-toolbar {
-  height: 32px;
-}
-.editable-attributes .sprite-container .clear-palette {
-  position: relative;
-  width: 32px;
-  height: 32px;
-  display: inline-block;
-  overflow: hidden;
-  border: 1px solid #888;
-  cursor: pointer;
-}
-.editable-attributes .sprite-container .clear-palette.selected {
-  box-shadow: 0 0 4px black;
-}
-.editable-attributes .sprite-container .clear-palette span {
-  height: 150%;
-  width: 150%;
-  top: 27%;
-  left: 27%;
-  position: absolute;
-  display: inline-block;
-  border-left: 2px solid red;
-  transform: rotate(45deg);
-  cursor: pointer;
-}
-.editable-attributes .sprite-container .colour-div {
-  width: 37px;
-  height: 37px;
-  margin: 2px;
-  border-radius: 4px;
-  position: relative;
-  float: left;
-  cursor: pointer;
-  border: 1px solid #000;
-  overflow: hidden;
-  box-sizing: border-box;
-}
-.editable-attributes .sprite-container .colour-div.selected {
-  box-shadow: 0 0 4px black;
-}
-.editable-attributes .sprite-container .hidden {
-  display: none;
-}
-.editable-attributes .sprite-container input.error {
-  box-shadow: 0px 0px 2px 1px #F00;
-}
-.editable-attributes .sprite-container canvas {
-  margin-bottom: 4px;
-  border: solid #888 1px;
-  cursor: pointer;
-}
-.editable-attributes .sprite-container canvas.selected {
-  box-shadow: 0 0 4px black
-}
-.editable-attributes .sprite-container .expand-sprite-editor {
-  font-size: 26px;
-  color: #888;
-  vertical-align: top;
-  display: inline-block;
-  margin-left: 10px;
-  cursor: pointer;
-}
-.editable-attributes .sprite-container .colour-container {
-  height: 160px;
-  width: 164px;
-  float: left;
-  margin-left: -2px;
-  margin-top: -2px;
-}
-.editable-attributes .sprite-container .grid-container {
-  border-style: solid;
-  border-color: black;
-  border-top-width: 0;
-  border-right-width: 1px;
-  border-bottom-width: 1px;
-  border-left-width: 0;
-  height: 160px;
-  width: 160px;
-  float: left;
-  margin-right: 10px;
-  background-image: url('/images/transparent.png');
-}
-.editable-attributes .sprite-container .grid-container .tile-editor-row {
-  margin: 0;
-  height: 10px;
-}
-.editable-attributes .sprite-container .grid-container .tile-editor-pixel {
-  height: 9px;
-  width: 9px;
-  float: left;
-  border-style: solid;
-  border-color: black;
-  border-bottom-width: 0;
-  border-right-width: 0;
-  border-top-width: 1px;
-  border-left-width: 1px;
-  cursor: pointer;
-}
-
-</style>
 
 <style>
   .col {
@@ -132,6 +7,8 @@
     display: inline-block;
     position: relative;
     padding: 0px;
+    image-rendering: -moz-crisp-edges;
+    background-size: 288px 576px;
     cursor: pointer;
   }
   .map-item {
@@ -152,13 +29,33 @@
     right: 0px;
     left: 340px;
   }
+  .tile-palette {
+    height: 32px;
+    width: 32px;
+    image-rendering: -moz-crisp-edges;
+    background-size: 288px 576px;
+    cursor: pointer;
+    display: inline-block;
+  }
+  .tile-palette.selected {
+    box-shadow: 0 0 4px black
+  }
 </style>
 
 <div>
-  <div class="editable-attributes"></div>
-  <button class="add-tile">+ tile</button>
-  <div>height</div><input class="height" type="text" value="10"></input>
-  <div>width</div><input class="width" type="text" value="10"></input>
+  <div class="tile-palette-container"></div>
+  <select class="selected-tileset">
+    <option value="tileset1.png" selected>tileset 1</option> 
+    <option value="tileset2.png">tileset 2</option>
+    <option value="tileset2.png">tileset 3</option>
+  </select>
+  <select class="selected-layer">
+    <option value="1" selected>ground</option> 
+    <option value="2">doodad 1</option>
+    <option value="3">doodad 2</option>
+  </select>
+  <div>height</div><input class="height" type="text" value="25"></input>
+  <div>width</div><input class="width" type="text" value="15"></input>
   <div>monsters</div>
   <div class="monster-list"></div>
   <button class="add-monster">+ monster</button>
@@ -183,10 +80,52 @@
   var row;
   var col;
 
-  var selectedPaletteItem;
-  var selectedPaletteItemIndex;
-  
-  var sprites = [];
+  var tilePaletteContainer = document.querySelector(".tile-palette-container");
+  var selectedPaletteTile;
+
+  function createRow(y) {
+    var spritePaletteRow = document.createElement("div");
+    for (var w = 0; w < 9; w++) {
+      spritePaletteRow.appendChild(createSpritePalette(-w*32, y));
+    }
+    tilePaletteContainer.appendChild(spritePaletteRow);
+  }
+
+  function createSpritePalette(x, y) {
+    var tileSize = 32;
+    var spritePalette = document.createElement("span");
+    spritePalette.addEventListener("click", function() {
+      var previous = document.querySelector(".tile-palette.selected");
+      if (previous) {
+        previous.classList.remove("selected");
+      }
+      selectedPaletteTile = {
+        x: x,
+        y: y
+      };
+      this.classList.add("selected");
+    });
+    spritePalette.classList.add("tile-palette");
+    spritePalette.style.backgroundImage = "url(" + tileset.value + ")";
+    spritePalette.style.backgroundPosition = x + "px " + y + "px";
+    return spritePalette;
+  }
+
+  function setupPalette() {
+    for (var h = 0; h < 18; h++) {
+      createRow(-h*32);
+    }
+  }
+  function clearPalette() {
+    tilePaletteContainer.innerHTML = "";
+  }
+  var tileset = document.querySelector(".selected-tileset");
+  tileset.addEventListener("change", function() {
+    clearPalette();
+    setupPalette();
+  });
+  var selectedLayer = document.querySelector(".selected-layer");
+  setupPalette();
 
   heightElement.addEventListener("change", generateBoard);
   widthElement.addEventListener("change", generateBoard);
@@ -194,22 +133,43 @@
   var gameBoardArray = [];
   var isMouseDown = false;
 
-  function createEvents(rowLocal, x, y, dataUri) {
+  function createTile(element, tile, palette, tileset) {
+    var layerIndex = parseInt(selectedLayer.value, 10);
+    var newBackgroundImage = "url(" + tileset + ")";
+    var newBackgroundPosition = palette.x + "px " + palette.y + "px";
+    tile.tileset = tileset;
+    tile.palette = palette;
+    tile.layers[layerIndex] = {
+      image: newBackgroundImage,
+      position: newBackgroundPosition
+    };
+    var positions = [];
+    var images = [];
+    for (var i = 0; i < tile.layers.length; i++) {
+      if (tile.layers[i]) {
+        if (tile.layers[i].image) {
+          images.unshift(tile.layers[i].image);
+        }
+        if (tile.layers[i].position) {
+          positions.unshift(tile.layers[i].position);
+        }
+      }
+    }
+    element.style.backgroundPosition = positions.join(", ");
+    element.style.backgroundImage = images.join(", ");
+  }
+
+  function createCol(rowLocal, x, y) {
     var col = document.createElement("span");
     col.classList.add("col");
-    col.classList.add("ground");
-    if (dataUri) {
-      col.style.backgroundImage = 'url("' + dataUri + '")';
-    }
     col.addEventListener("mousedown", function(e) {
       e.preventDefault();
-      if (!selectedPaletteItem) {
+      if (!selectedPaletteTile) {
         return;
       }
       isMouseDown = true;
+      createTile(col, gameBoardArray[y][x], selectedPaletteTile, tileset.value);
       window.addEventListener("mouseup", onMouseUp);
-      this.style.backgroundImage = selectedPaletteItem;
-      gameBoardArray[y][x] = selectedPaletteItemIndex;
     });
 
     function onMouseUp() {
@@ -218,13 +178,13 @@
     }
 
     col.addEventListener("mouseover", function() {
-      if (!selectedPaletteItem || !isMouseDown) {
+      if (!selectedPaletteTile || !isMouseDown) {
         return;
       }
-      this.style.backgroundImage = selectedPaletteItem;
-      gameBoardArray[y][x] = selectedPaletteItemIndex;
+      createTile(col, gameBoardArray[y][x], selectedPaletteTile, tileset.value);
     });
     rowLocal.appendChild(col);
+    createTile(col, gameBoardArray[y][x], gameBoardArray[y][x].palette, gameBoardArray[y][x].tileset);
   }
 
   function generateBoard() {
@@ -233,7 +193,6 @@
     container.innerHTML = "";
     container.style.width = width * 32 + "px";
     container.style.height = height * 32 + "px";
-    var thisTile;
     for (var y = 0; y < height; y++) {
       row = document.createElement("div");
       if (!gameBoardArray[y]) {
@@ -241,10 +200,16 @@
       }
       for (var x = 0; x < width; x++) {
         if (gameBoardArray[y][x] == null) {
-          gameBoardArray[y].push(0);
+          gameBoardArray[y].push({
+            layers: [],
+            palette: {
+              x: -32,
+              y: -416
+            },
+            tileset: "tileset1.png"
+          });
         }
-        thisTile = gameBoardArray[y][x];
-        createEvents(row, x, y, sprites[thisTile].data);
+        createCol(row, x, y);
       }
       container.appendChild(row);
     }
@@ -280,320 +245,7 @@
     addMonster(monster);
   });
 
-  var addTileButton = document.querySelector(".add-tile");
-
-  addTileButton.addEventListener("click", function() {
-    var dataUri = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAK0lEQVRYhe3OIQEAAAwEoetfeovxBoGn6sYEBAQEBAQEBAQEBAQEBAS2gQe3tfwuUX7i9AAAAABJRU5ErkJggg==";
-    var sprite = {
-      data: dataUri,
-      collision: false
-    };
-    sprites.push(sprite);
-    addSpriteEditor(sprite.data, sprite.collision, sprites.length-1);
-  });
-  function addSpriteEditor(dataUri, collision, index) {
-    document.querySelector(".editable-attributes").appendChild(createSpriteEditor("", "", "", dataUri, {scale: 2}, index, collision));
-  }
-
-  function removeAllSprites() {
-    sprites = [];
-    document.querySelector(".editable-attributes").innerHTML = "";
-  }
-
-  function createSpriteEditor(element, attributeName, title, value, definition, index, collision) {
-
-    var scale = definition.scale || 1;
-    var mainContainer = document.createElement("div");
-    var previewCanvas = document.createElement("canvas");
-    var dataInput = document.createElement("input");
-    var expandIcon = document.createElement("span");
-    var collisionLabel = document.createElement("span");
-    collisionLabel.textContent = "wall";
-    var collisionInput = document.createElement("input");
-    collisionInput.type = "checkbox";
-    collisionInput.addEventListener("change", function() {
-      sprites[index].collision = this.checked;
-    });
-    if (collision) {
-      collisionInput.checked = true;
-    }
-    expandIcon.classList.add("icon");
-    expandIcon.classList.add("icon-angle-down");
-    expandIcon.classList.add("expand-sprite-editor");
-    dataInput.type = "text";
-    var height = 16 * scale;
-    var width = 16 * scale;
-    previewCanvas.height = height;
-    previewCanvas.width = width;
-    var previewCtx = previewCanvas.getContext("2d");
-    var container = document.createElement("div");
-    var label = document.createElement("label");
-    label.textContent = title;
-    container.classList.add("sprite-container");
-    var grid = document.createElement("div");
-    grid.classList.add("grid-container");
-    var colourContainer = document.createElement("div");
-    var toolBar = document.createElement("div");
-    toolBar.classList.add("sprite-toolbar");
-    colourContainer.classList.add("colour-container");
-    var clearPalette = document.createElement("span");
-    clearPalette.classList.add("clear-palette");
-    toolBar.appendChild(clearPalette);
-    toolBar.appendChild(collisionLabel);
-    toolBar.appendChild(collisionInput);
-    var redLine = document.createElement("span");
-    clearPalette.appendChild(redLine);
-    var selectedColor = "";
-
-    previewCanvas.addEventListener("click", function() {
-      var previousCanvas = document.querySelector("canvas.selected");
-      if (previousCanvas) {
-        previousCanvas.classList.remove("selected");
-      }
-      previewCanvas.classList.add("selected");
-      selectedPaletteItem = 'url("' + dataInput.value + '")';
-      selectedPaletteItemIndex = index;
-    });
-
-    clearPalette.addEventListener("mousedown", function() {
-      clearPalette.classList.add("selected");
-      selectedColor = "";
-      var selectedPalette = colourContainer.querySelector(".colour-div.selected");
-      if (selectedPalette) {
-        selectedPalette.classList.remove("selected");
-      }
-    });
-
-    var customColours = {
-      "rgb(222, 3, 16)": "",
-      "rgb(232, 47, 10)": "",
-      "rgb(239, 81, 6)": "",
-      "rgb(248, 115, 3)": "",
-      "rgb(248, 146, 0)": "",
-      "rgb(204, 161, 8)": "",
-      "rgb(160, 175, 14)": "",
-      "rgb(120, 188, 19)": "",
-      "rgb(86, 187, 45)": "",
-      "rgb(61, 172, 93)": "",
-      "rgb(37, 156, 139)": "",
-      "rgb(13, 139, 184)": "",
-      "rgb(19, 115, 210)": "",
-      "rgb(57, 81, 210)": "",
-      "rgb(95, 48, 210)": "",
-      "rgb(138, 11, 210)": ""
-    };
-
-    var defaultColours = Object.keys(customColours);
-
-    // Need to do this on demand
-    function createColours() {
-      mainContainer.appendChild(colourContainer);
-
-      defaultColours.forEach(function(value, index) {
-
-        var colourPicker = document.createElement("input");
-        var colourDiv = document.createElement("div");
-        var colourPickerDisplay = document.createElement("div");
-        colourDiv.classList.add("colour-div");
-        colourPicker.type = "color";
-        colourPickerDisplay.classList.add("sprite-color-picker");
-        colourPickerDisplay.addEventListener("click", function() {
-          colourPicker.click();
-        });
-
-        colourDiv.style.backgroundColor = value;
-        var parts = value.replace("rgb(", "").replace(")", "").split(", ");
-        var colourHash = "#" + parts.map(function(c) {
-          c = parseInt(c,10).toString(16);
-          if (c.length <= 1) {
-            c = "0" + c;
-          }
-          return c;
-        }).join("");
-        colourPicker.value = colourHash;
-        function onClick() {
-          selectedColor = colourDiv.style.backgroundColor;
-          var selectedPalette = colourContainer.querySelector(".colour-div.selected");
-          if (selectedPalette) {
-            selectedPalette.classList.remove("selected");
-          } else {
-            clearPalette.classList.remove("selected");
-          }
-          colourDiv.classList.add("selected");
-        }
-        colourDiv.addEventListener("mousedown", onClick);
-
-        if (index === 0) {
-          onClick();
-        }
-
-        colourPicker.addEventListener("change", function() {
-          var div = document.createElement("div");
-          div.style.backgroundColor = this.value;
-          colourDiv.style.backgroundColor = this.value;
-          selectedColor = div.style.backgroundColor;
-          var selectedPalette = colourContainer.querySelector(".colour-div.selected");
-          if (selectedPalette) {
-            selectedPalette.classList.remove("selected");
-          }
-          colourDiv.classList.add("selected");
-        });
-        colourDiv.appendChild(colourPickerDisplay);
-        colourContainer.appendChild(colourDiv);
-      });
-    }
-
-    var isMouseDown = false;
-    function onPixelMouseup() {
-      isMouseDown = false;
-      dataInput.classList.remove("error");
-      var newData = previewCanvas.toDataURL();
-      dataInput.value = newData;
-      sprites[index].data = newData;
-      window.removeEventListener("mouseup", onPixelMouseup);
-    }
-    function paintPixel(block, row, col) {
-      var row = row || block.parentNode.getAttribute("data-tile-editor-row");
-      var col = col || block.getAttribute("data-tile-editor-col");
-      if (!selectedColor) {
-        block.style.backgroundColor = "rgba(0, 0, 0, 0)";
-        previewCtx.clearRect(col*scale,row*scale,scale,scale);
-      } else {
-        block.style.backgroundColor = selectedColor;
-        previewCtx.fillStyle = selectedColor;
-        previewCtx.fillRect(col*scale,row*scale,scale,scale);
-      }
-    }
-    function onPixelMousedown(e) {
-      e.preventDefault();
-      isMouseDown = true;
-      window.addEventListener("mouseup", onPixelMouseup);
-      paintPixel(this);
-    }
-    function onPixelMouseover(e) {
-      if (!isMouseDown) {
-        return;
-      }
-      paintPixel(this);
-    }
-
-    function fillGrid() {
-      var imgd = previewCtx.getImageData(0, 0, previewCanvas.width, previewCanvas.height);
-      var gridElement = mainContainer.querySelector(".grid-container");
-
-      if (!gridElement) {
-        return;
-      }
-
-      for (var x = 0; x < imgd.width; x+=scale) {
-        var realX = x/scale;
-        for (var y = 0; y < imgd.height; y+=scale) {
-          var realY = y/scale;
-          var i = x*4+y*4*imgd.width;
-          var targetRow = gridElement.querySelector('*[data-tile-editor-row="'+ (realY) + '"]');
-          var targetCol = targetRow.querySelector('*[data-tile-editor-col="'+ (realX) + '"]');
-          // for now convert transparent to white
-          if (imgd.data[i+3] === 0) {
-            targetCol.style.backgroundColor = "rgba(0, 0, 0, 0)";
-          } else {
-            var red = imgd.data[i];
-            var green = imgd.data[i+1];
-            var blue = imgd.data[i+2];
-            var alpha = imgd.data[i+3];
-            var colour = "rgb("+red+", "+green+", "+blue+")";
-            if (imgd.data[i+3] === 0) {
-              colour = "rgba("+red+", "+green+", "+blue+", " + alpha + ")";
-            }
-            if (!customColours[colour]) {
-              customColours[colour] = colour;
-              defaultColours.pop();
-              defaultColours.unshift(colour);
-            }
-            targetCol.style.backgroundColor = colour;
-          }
-        }
-      }
-    }
-
-    function fillPreview(data, callback) {
-      var image = document.createElement("img");
-      image.onload = function() {
-        dataInput.classList.remove("error");
-        previewCtx.drawImage(image,0,0);
-        callback && callback();
-      };
-      image.onerror = function() {
-        dataInput.classList.add("error");
-      };
-      if (!data) {
-        dataInput.classList.remove("error");
-        callback && callback();
-        return;
-      }
-      image.src = data;
-    }
-
-    fillPreview(value);
-    dataInput.value = value;
-    dataInput.addEventListener("change", function() {
-      var value = this.value;
-      previewCtx.clearRect(0, 0, width, height);
-      fillPreview(value, function() {
-        fillGrid();
-      });
-    });
-
-    container.appendChild(label);
-    container.appendChild(previewCanvas);
-    container.appendChild(expandIcon);
-    mainContainer.appendChild(toolBar);
-    container.appendChild(mainContainer);
-
-    function onExpandIconClick() {
-      if (expandIcon.classList.contains("icon-angle-down")) {
-        mainContainer.classList.remove("hidden");
-        expandIcon.classList.remove("icon-angle-down");
-        expandIcon.classList.add("icon-angle-up");
-      } else {
-        mainContainer.classList.add("hidden");
-        expandIcon.classList.add("icon-angle-down");
-        expandIcon.classList.remove("icon-angle-up");
-      }
-    }
-    // First click creates the content, following clicks just hide/show.
-    function onExpandIconFirstClick() {
-
-      mainContainer.appendChild(grid);
-      for (var r = 0; r < 16; r++) {
-        var row = document.createElement("div");
-        row.classList.add("tile-editor-row");
-        row.setAttribute("data-tile-editor-row", r);
-        for (var c = 0; c < 16; c++) {
-          var col = document.createElement("span");
-          col.setAttribute("data-tile-editor-col", c);
-          col.classList.add("tile-editor-pixel");
-          col.addEventListener("mouseover", onPixelMouseover);
-          col.addEventListener("mousedown", onPixelMousedown);
-          row.appendChild(col);
-        }
-        grid.appendChild(row);
-      }
-      expandIcon.removeEventListener("mousedown", onExpandIconFirstClick);
-      expandIcon.addEventListener("mousedown", onExpandIconClick);
-      onExpandIconClick();
-      fillGrid();
-      createColours();
-    }
-
-    expandIcon.addEventListener("mousedown", onExpandIconFirstClick);
-    mainContainer.classList.add("hidden");
-    container.appendChild(dataInput);
-
-    return container;
-  };
-
   var loadedMap;
-  var loadedSpriteSheet;
   function loadMap(mapId) {
     var TestObject = Parse.Object.extend("SavedMapsTest");
     var testQuery = new Parse.Query(TestObject);
@@ -603,11 +255,6 @@
       chanceElement.value = map.get("battleChance");
       heightElement.value = height;
       widthElement.value = width;
-      removeAllSprites();
-      sprites = map.get("sprites");
-      for (var i = 0; i < sprites.length; i++) {
-        addSpriteEditor(sprites[i].data, sprites[i].collision, i);
-      }
       monsters = map.get("monsters") || [];
       for (var i = 0; i < monsters.length; i++) {
         addMonster(monsters[i]);
@@ -652,12 +299,11 @@
   }
   generateMapList();
   function saveMap(gameName, callback) {
-  var height = heightElement.value;
+    var height = heightElement.value;
     loadedMap.save({
       name: gameName,
       height: height,
       width: width,
-      sprites: sprites,
       battleChance: chanceElement.value,
       gameBoard: gameBoardArray,
       monsters: monsters
@@ -693,19 +339,5 @@
     saveMapFunction(gameName, generateMapList);
   }
   document.querySelector(".save-game").addEventListener("click", onSaveGameClick);
-
-  function createDefaultSprite(dataUri, collision) {
-    var sprite = {
-      data: dataUri,
-      collision: collision
-    };
-    sprites.push(sprite);
-    addSpriteEditor(dataUri, collision, sprites.length-1);
-  }
-  createDefaultSprite("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAhUlEQVRYhe3XwQ2AIAwF0JowL2ENZiCM5ghsgNa7CQG02C96+Oc+4KcJtO4La4Y+A7CB2AYCBrho2EXzOAQHUErKnlP2Ylfe3QE1wNXBvRBcwGjY+wDSg/EB0oupdAA8QOsCkYLgAaSepLW0+IC7ZaxB8AGjMzFgq2R+wCn4/wKt/AB1wAEpUF7eamflHQAAAABJRU5ErkJggg==", false);
-  createDefaultSprite("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAk0lEQVRYhWOom8vzv24uz//de1aQhGH6KNXPMOAOaMhy/t+Q5fx/ydRSkjDMIEr1jzpg5Dlg9+5lEDxiHTDgUTDqAKIdUJ/l9L8+y2kEOABWKcAMIhajV0bk6h88DhhtD5CaiA4dXPP/0ME1BBMhrOjFpX/4O4CQ/uHnAEIF2PB3wIBHwagDRh1AsgMGTXU8UA4AANEaiS8F8jfjAAAAAElFTkSuQmCC", true);
-  createDefaultSprite("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAiUlEQVRYhWM40SPwfyAxw4A7INeK6f9A4MHnAJjAgiBmmuKh4wBqJ7ah5wBq4W21LP+31bIMQQfAxHEZSAgPHwfUOEHwqANwRQk6Rjdn1AGjDhh+DiCEqV4UDxoHEAp6XHjoOOBQK8v/Q62YCsnFQ9cBsCCnFkaPksHvAGo3RgnhweMAeuNB4wAA8HXyXulpvwIAAAAASUVORK5CYII=", true);
-  createDefaultSprite("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAeUlEQVRYhWNY3PLo/0BihgF3gKdNzX9Pm5r/bVnnaIJhFuESH7oOgOkjV//QdQCuICXXnFEHDD0HoBuAy0FDzwG0LpBGHTD4HUAvi0cdMHQdQK3ESnaTbMAcgF7UjlwHkFvpUJwIB9wBtMLD1wHEmjf4HDBQeMAdAACZk61XAUosyAAAAABJRU5ErkJggg==", true);
-  createDefaultSprite("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAbElEQVRYhWPwmV3632d26f+JV6cPCGYYcAcYlAT9NygJ+g9zCL3wqAOGvgNgBgx/B8DkycVD3wHkFjDDzwHEJtZRB4w6YNQBw98BhPDwdQAujEvd8HEArfCoA4aOA4htYg19B9Abwxwy4A4AAEMumjQBe3MiAAAAAElFTkSuQmCC", true);
   generateBoard();
   </script>
