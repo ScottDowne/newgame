@@ -1,5 +1,7 @@
 <link href='http://fonts.googleapis.com/css?family=Press+Start+2P' rel='stylesheet' type='text/css'>
-<script type="text/javascript" src="http://www.parsecdn.com/js/parse-1.2.19.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.1.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.1.1/firebase-firestore.js"></script>
+
 <style>
   body {
     font-family: 'Press Start 2P', cursive;
@@ -37,7 +39,7 @@
     position: relative;
     padding: 0px;
     image-rendering: -moz-crisp-edges;
-    background-size: 64px 64px;
+    background-size: 576px 1152px;
   }
   .player {
     height: 64px;
@@ -153,8 +155,25 @@
   <div>existing maps</div>
   <div class="map-list"></div>
 </div>
+
 <script>
-  Parse.initialize("rbzFxBKYWagwxXYmTXmZiQ2IrZOuiQXLEqpNhJoS", "vMPmzQLwkPcF4e0eDd0QwLAgAkG2DX67AgbK7NQQ");
+  // Your web app's Firebase configuration
+  var firebaseConfig = {
+    apiKey: "AIzaSyDu911uSI-8yoMn2jRkohDKa9MN_LZF9Xg",
+    authDomain: "newgame-ab4cc.firebaseapp.com",
+    databaseURL: "https://newgame-ab4cc.firebaseio.com",
+    projectId: "newgame-ab4cc",
+    storageBucket: "newgame-ab4cc.appspot.com",
+    messagingSenderId: "819379041798",
+    appId: "1:819379041798:web:3539da5a7af84a504c3587",
+    name: "newgame",
+  };
+  // Initialize Firebase
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+</script>
+
+<script>
   var data = [];
 
   var abilities = {
@@ -309,7 +328,7 @@
     ]
   };
 
-  function createBoard(gameBoard, sprites, height, width) {
+  function createBoard(gameBoard, height, width) {
     var container = document.querySelector(".container");
     var boardContainer = document.createElement("div");
     boardContainer.classList.add("board-container");
@@ -323,12 +342,13 @@
       data[y] = [];
       for (var x = 0; x < width; x++) {
         col = document.createElement("span");
-        if (sprites[gameBoard[y][x]].collision) {
+        /*if (sprites[gameBoard[y][x]].collision) {
           data[y][x] = "x";
         } else {
           data[y][x] = " ";
-        }
-        col.style.backgroundImage = 'url("' + sprites[gameBoard[y][x]].data + '")';
+        }*/
+        col.style.backgroundImage = 'url("' + gameBoard[y][x].tileset + '")';
+        col.style.backgroundPosition = '' + (gameBoard[y][x].palette.x*2) + 'px ' + (gameBoard[y][x].palette.y*2) + 'px';
         col.classList.add("col");
         row.appendChild(col);
       }
@@ -563,13 +583,13 @@
       dialogFocus[dialogFocus.length-1](key);
       key = "";
       setTimeout(processKeys);
-    } else if (playerKeys["Right"]) {
+    } else if (playerKeys["ArrowRight"]) {
       movePlayer("right", 1, 0);
-    } else if (playerKeys["Left"]) {
+    } else if (playerKeys["ArrowLeft"]) {
       movePlayer("left", -1, 0);
-    } else if (playerKeys["Down"]) {
+    } else if (playerKeys["ArrowDown"]) {
       movePlayer("down", 0, 1);
-    } else if (playerKeys["Up"]) {
+    } else if (playerKeys["ArrowUp"]) {
       movePlayer("up", 0, -1);
     } else {
       setTimeout(processKeys);
@@ -594,7 +614,7 @@
         player.y+=y;
         player.x+=x;
         dialogFocus.pop();
-        rollForBattle(chance);
+        //rollForBattle(chance);
         setTimeout(processKeys);
         /*if (numberOfKeys === 0) {
           playerElement.className = "player";
@@ -685,12 +705,33 @@
   }
 
   function generateMapList() {
-    var TestObject = Parse.Object.extend("SavedMapsTest");
-    var query = new Parse.Query(TestObject);
-    query.find({
+    db.collection("SavedMapsTest").get().then(function(querySnapshot) {
+      var mapList = document.querySelector(".map-list");
+      var mapListContainer = document.querySelector(".map-list-container");
+      mapList.innerHTML = "";
+      querySnapshot.forEach(function(doc) {
+        // doc.data() is never undefined for query doc snapshots
+        const object = doc.data();
+        var mapItem = document.createElement("div");
+        mapItem.classList.add("map-item");
+        mapItem.textContent = object.name;
+        mapList.appendChild(mapItem);
+        mapItem.addEventListener("click", function() {
+
+          //var localeSprites = object.sprites;
+          var gameBoardArray = JSON.parse(object.gameBoard);
+          var height = object.height;
+          var width = object.width;
+          chance = object.battleChance;
+          mapListContainer.innerHTML = "";
+          createBoard(gameBoardArray, height, width);
+          createPlayer(1, 1);
+        });
+      });
+    });
+
+    /*query.find({
       success: function(results) {
-        console.log("Successfully retrieved " + results.length + " maps.");
-        // Do something with the returned Parse.Object values
         results.reverse();
         var mapList = document.querySelector(".map-list");
         var mapListContainer = document.querySelector(".map-list-container");
@@ -716,7 +757,7 @@
       error: function(error) {
         console.log("Error: " + error.code + " " + error.message);
       }
-    });
+    });*/
   }
   generateMapList();
 

@@ -1,4 +1,5 @@
-<script type="text/javascript" src="https://npmcdn.com/parse@2.18.0/dist/parse.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.1.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.1.1/firebase-firestore.js"></script>
 
 <style>
   .col {
@@ -57,8 +58,8 @@
   <div>height</div><input class="height" type="text" value="25"></input>
   <div>width</div><input class="width" type="text" value="15"></input>
   <div>monsters</div>
-  <div class="monster-list"></div>
-  <button class="add-monster">+ monster</button>
+  <!-- <div class="monster-list"></div> -->
+  <!-- <button class="add-monster">+ monster</button> -->
   <div>battle chance</div>
   <input class="battle-chance" type="text" value="10"></input>
   <div>name</div><input class="game-name" type="text"></input>
@@ -69,8 +70,25 @@
 <div class="map-container">
   <div class="container"></div>
 </div>
+
 <script>
-  Parse.initialize("rbzFxBKYWagwxXYmTXmZiQ2IrZOuiQXLEqpNhJoS", "vMPmzQLwkPcF4e0eDd0QwLAgAkG2DX67AgbK7NQQ");
+  // Your web app's Firebase configuration
+  var firebaseConfig = {
+    apiKey: "AIzaSyDu911uSI-8yoMn2jRkohDKa9MN_LZF9Xg",
+    authDomain: "newgame-ab4cc.firebaseapp.com",
+    databaseURL: "https://newgame-ab4cc.firebaseio.com",
+    projectId: "newgame-ab4cc",
+    storageBucket: "newgame-ab4cc.appspot.com",
+    messagingSenderId: "819379041798",
+    appId: "1:819379041798:web:3539da5a7af84a504c3587",
+    name: "newgame",
+  };
+  // Initialize Firebase
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+</script>
+
+<script>
   var container = document.querySelector(".container");
   var heightElement = document.querySelector(".height");
   var widthElement = document.querySelector(".width");
@@ -215,7 +233,7 @@
     }
   }
 
-  var addMonsterButton = document.querySelector(".add-monster");
+  /*var addMonsterButton = document.querySelector(".add-monster");
   var monsters = [];
 
   function addMonster(monster) {
@@ -243,83 +261,76 @@
     var monster = {};
     monsters.push(monster);
     addMonster(monster);
-  });
+  });*/
 
   var loadedMap;
+  var loadedMapName = "";
   function loadMap(mapId) {
-    var TestObject = Parse.Object.extend("SavedMapsTest");
-    var testQuery = new Parse.Query(TestObject);
-    testQuery.get(mapId, function(map) {
-      height = map.get("height");
-      width = map.get("width");
-      chanceElement.value = map.get("battleChance");
+    loadedMap = db.collection("SavedMapsTest").doc(mapId);
+    loadedMap.get().then(doc => {
+      const map = doc.data();
+      height = map.height;
+      width = map.width;
+      chanceElement.value = map.battleChance;
       heightElement.value = height;
       widthElement.value = width;
-      monsters = map.get("monsters") || [];
+      /*monsters = map.get("monsters") || [];
       for (var i = 0; i < monsters.length; i++) {
         addMonster(monsters[i]);
-      }
-      gameBoardArray = map.get("gameBoard");
+      }*/
+      gameBoardArray = JSON.parse(map.gameBoard);
       generateBoard();
-      document.querySelector(".game-name").value = map.get("name");
-      loadedMap = map;
+      document.querySelector(".game-name").value = map.name;
+      loadedMapName = map.name;
     });
   }
   function generateMapList() {
-    var MapsList = Parse.Object.extend("SavedMapsTestList");
-    var query = new Parse.Query(MapsList);
-    query.find({
-      success: function(results) {
-        console.log("Successfully retrieved " + results.length + " maps.");
-        // Do something with the returned Parse.Object values
-        var mapList = document.querySelector(".map-list");
-        mapList.innerHTML = "";
-        results.forEach(function(object) {
-          var mapItem = document.createElement("div");
-          mapItem.classList.add("map-item");
-          mapItem.textContent = object.get("name");
-          mapList.appendChild(mapItem);
-          if (loadedMap && loadedMap.get("name") === object.get("name")) {
-            mapItem.classList.add("selected");
+    db.collection("SavedMapsTestList").get().then(function(querySnapshot) {
+      // Do something with the returned values
+      var mapList = document.querySelector(".map-list");
+      mapList.innerHTML = "";
+      querySnapshot.forEach(function(doc) {
+        // doc.data() is never undefined for query doc snapshots
+        const object = doc.data();
+
+        var mapItem = document.createElement("div");
+        mapItem.classList.add("map-item");
+        mapItem.textContent = object.name;
+        mapList.appendChild(mapItem);
+        if (loadedMap && loadedMapName === object.name) {
+          mapItem.classList.add("selected");
+        }
+        mapItem.addEventListener("click", function() {
+          var previousSelected = document.querySelector(".map-item.selected");
+          if (previousSelected) {
+            previousSelected.classList.remove("selected");
           }
-          mapItem.addEventListener("click", function() {
-            var previousSelected = document.querySelector(".map-item.selected");
-            if (previousSelected) {
-              previousSelected.classList.remove("selected");
-            }
-            loadMap(object.get("mapId"));
-            mapItem.classList.add("selected");
-          });
+          loadMap(object.name);
+          mapItem.classList.add("selected");
         });
-      },
-      error: function(error) {
-        console.log("Error: " + error.code + " " + error.message);
-      }
+      });
     });
   }
   generateMapList();
   function saveMap(gameName, callback) {
     var height = heightElement.value;
-    loadedMap.save({
+    loadedMap.set({
       name: gameName,
       height: height,
       width: width,
       battleChance: chanceElement.value,
-      gameBoard: gameBoardArray,
-      monsters: monsters
+      gameBoard: JSON.stringify(gameBoardArray),
+      //monsters: monsters
     }).then(callback);
   }
 
   function saveMapAs(gameName, callback) {
-    var TestObject = Parse.Object.extend("SavedMapsTest");
-    var testObject = new TestObject();
-    loadedMap = testObject;
-    saveMap(gameName, function(e) {
-      var MapsList = Parse.Object.extend("SavedMapsTestList");
-      var mapsList = new MapsList();
-      mapsList.save({
-        name: gameName,
-        mapId: e.id
+    loadedMap = db.collection("SavedMapsTest").doc(gameName);
+    loadedMapName = gameName;
+    saveMap(gameName, function() {
+      var mapsList = db.collection("SavedMapsTestList").doc(gameName);
+      mapsList.set({
+        name: gameName
       }).then(callback);
     });
   }
